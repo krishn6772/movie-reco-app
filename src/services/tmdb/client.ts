@@ -1,5 +1,14 @@
 import { ENV, hasRealTmdb } from "../../config/env";
-import type { MovieDetails, CreditsResponse, TmdbListResponse, Movie } from "./types";
+import type {
+  ContentType,
+  MediaDetails,
+  CreditsResponse,
+  TmdbListResponse,
+  MediaItem,
+  TmdbVideosResponse,
+  WatchProvidersResponse,
+  GenresResponse,
+} from "./types";
 import { endpoints, type HomeCategory } from "./endpoints";
 import { mockTmdb } from "../mock/mockClient";
 
@@ -12,7 +21,7 @@ const fetchJSON: FetchJSON = async (path, params = {}) => {
   // ✅ If proxy missing → mock
   if (!hasRealTmdb()) {
     console.log("✅ Using MOCK TMDB (proxy missing)", path);
-    return mockTmdb.fetch(path, params) as Promise<any>;
+    return mockTmdb.fetch(path, params) as Promise<T>;
   }
 
   // ✅ Proxy call
@@ -44,16 +53,38 @@ const fetchJSON: FetchJSON = async (path, params = {}) => {
 };
 
 export const tmdb = {
-  listMovies: (category: HomeCategory, page: number = 1) =>
-    fetchJSON<TmdbListResponse<Movie>>(endpoints[category](), { page }),
+  listByCategory: (type: ContentType, category: HomeCategory, page: number = 1, region?: string) => {
+    if (category === "trending") {
+      return fetchJSON<TmdbListResponse<MediaItem>>(endpoints.trending(type), { page });
+    }
+    return fetchJSON<TmdbListResponse<MediaItem>>(endpoints.category(type, category), {
+      page,
+      region: type === "movie" ? region : undefined,
+    });
+  },
 
-  searchMovies: (query: string, page: number = 1) =>
-    fetchJSON<TmdbListResponse<Movie>>(endpoints.search(), {
+  search: (
+    type: ContentType,
+    query: string,
+    page: number = 1,
+    opts?: { region?: string; year?: number | null }
+  ) =>
+    fetchJSON<TmdbListResponse<MediaItem>>(endpoints.search(type), {
       query,
       page,
       include_adult: 0,
+      region: type === "movie" ? opts?.region : undefined,
+      year: type === "movie" ? opts?.year ?? undefined : undefined,
+      first_air_date_year: type === "tv" ? opts?.year ?? undefined : undefined,
     }),
 
-  getMovieDetails: (id: number) => fetchJSON<MovieDetails>(endpoints.details(id)),
-  getMovieCredits: (id: number) => fetchJSON<CreditsResponse>(endpoints.credits(id)),
+  getDetails: (type: ContentType, id: number) =>
+    fetchJSON<MediaDetails>(endpoints.details(type, id)),
+  getCredits: (type: ContentType, id: number) =>
+    fetchJSON<CreditsResponse>(endpoints.credits(type, id)),
+  getVideos: (type: ContentType, id: number) =>
+    fetchJSON<TmdbVideosResponse>(endpoints.videos(type, id)),
+  getWatchProviders: (type: ContentType, id: number) =>
+    fetchJSON<WatchProvidersResponse>(endpoints.watchProviders(type, id)),
+  getGenres: (type: ContentType) => fetchJSON<GenresResponse>(endpoints.genres(type)),
 };

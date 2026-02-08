@@ -1,12 +1,12 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Movie } from "../tmdb/types";
+import type { MediaItem } from "../tmdb/types";
 
-export type UserMovieMap = Record<number, Movie>;
+export type UserMediaMap = Record<string, MediaItem>;
 
 type UserDoc = {
-  liked: Record<number, Movie>;
-  watchlist: Record<number, Movie>;
+  liked: UserMediaMap;
+  watchlist: UserMediaMap;
   updatedAt: number;
 };
 
@@ -31,7 +31,7 @@ export async function loadUserData(uid: string): Promise<UserDoc | null> {
   }
 }
 
-export async function saveUserData(uid: string, liked: UserMovieMap, watchlist: UserMovieMap) {
+export async function saveUserData(uid: string, liked: UserMediaMap, watchlist: UserMediaMap) {
   try {
     const ref = doc(db, "users", uid);
     await setDoc(

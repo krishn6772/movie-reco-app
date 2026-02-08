@@ -1,4 +1,4 @@
-import type { Movie } from "../services/tmdb/types";
+import type { MediaItem } from "../services/tmdb/types";
 
 function clamp(x: number, min: number, max: number) {
   return Math.max(min, Math.min(max, x));
@@ -11,7 +11,7 @@ function clamp(x: number, min: number, max: number) {
  * P = clamp(log10(1+popularity)/3, 0..1)
  * score = 0.55*G + 0.30*V + 0.15*P
  */
-export function scoreMovie(m: Movie, preferredGenres: Set<number>) {
+export function scoreMovie(m: MediaItem, preferredGenres: Set<number>) {
   const genres = m.genre_ids ?? [];
   const overlap = genres.filter((g) => preferredGenres.has(g)).length;
   const G = overlap / Math.max(1, genres.length);
@@ -22,9 +22,9 @@ export function scoreMovie(m: Movie, preferredGenres: Set<number>) {
 }
 
 export function recommendMovies(args: {
-  candidates: Movie[];
-  liked: Record<number, Movie>;
-  watchlist: Record<number, Movie>;
+  candidates: MediaItem[];
+  liked: Record<number, MediaItem>;
+  watchlist: Record<number, MediaItem>;
   limit?: number;
 }) {
   const { candidates, liked, watchlist, limit = 20 } = args;

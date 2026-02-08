@@ -1,4 +1,5 @@
 import { ENV } from "../config/env";
+import type { MediaItem, MediaDetails, ContentType } from "../services/tmdb/types";
 
 /**
  * Build a poster URL.
@@ -7,7 +8,7 @@ import { ENV } from "../config/env";
  */
 export function posterUrl(
   path: string | null | undefined,
-  size: "w342" | "w500" | "w780" = "w500"
+  size: "w92" | "w342" | "w500" | "w780" = "w500"
 ) {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -36,4 +37,33 @@ export function formatRating(voteAverage: number | null | undefined) {
   if (voteAverage === null || voteAverage === undefined) return "—";
   const v = Math.max(0, Math.min(10, voteAverage));
   return v.toFixed(1);
+}
+
+export function getMediaTitle(media: MediaItem | MediaDetails) {
+  if ("title" in media) return media.title ?? media.original_title ?? "Untitled";
+  if ("name" in media) return media.name ?? media.original_name ?? "Untitled";
+  return "Untitled";
+}
+
+export function getMediaDate(media: MediaItem | MediaDetails) {
+  if ("release_date" in media) return media.release_date ?? "";
+  if ("first_air_date" in media) return media.first_air_date ?? "";
+  return "";
+}
+
+export function getMediaYear(media: MediaItem | MediaDetails) {
+  return yearFromDate(getMediaDate(media));
+}
+
+export function getRuntimeLabel(media: MediaDetails, type: ContentType) {
+  if (type === "movie" && "runtime" in media) {
+    return media.runtime ? formatRuntime(media.runtime) : "â€”";
+  }
+  if (type === "tv" && "episode_run_time" in media) {
+    const runtime = Array.isArray(media.episode_run_time) && media.episode_run_time.length > 0
+      ? media.episode_run_time[0]
+      : null;
+    return runtime ? formatRuntime(runtime) : "â€”";
+  }
+  return "â€”";
 }

@@ -1,9 +1,9 @@
 import React, { useMemo } from "react";
 import { Image, Pressable, Text, View } from "react-native";
-import type { Movie } from "../services/tmdb/types";
+import type { MediaItem } from "../services/tmdb/types";
 import { useTheme } from "../theme/useTheme";
 import RatingBadge from "./RatingBadge";
-import { posterUrl, yearFromDate } from "../utils/format";
+import { posterUrl, getMediaTitle, getMediaYear } from "../utils/format";
 
 type Size = "large" | "small";
 
@@ -12,7 +12,7 @@ export default function MovieCard({
   onPress,
   size = "large",
 }: {
-  movie: Movie;
+  movie: MediaItem;
   onPress?: () => void;
   size?: Size;
 }) {
@@ -49,10 +49,10 @@ export default function MovieCard({
 
       <View style={{ marginTop: 10 }}>
         <Text numberOfLines={1} style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-          {movie.title}
+          {getMediaTitle(movie)}
         </Text>
         <Text style={{ color: theme.colors.muted, marginTop: 4, fontSize: 12 }}>
-          {yearFromDate(movie.release_date)}
+          {getMediaYear(movie)}
         </Text>
       </View>
     </Pressable>

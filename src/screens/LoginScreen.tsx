@@ -22,52 +22,104 @@ export default function LoginScreen() {
 
   return (
     <Screen padded>
-      <Text style={{ color: theme.colors.text, fontSize: 34, fontWeight: "900", marginTop: 6 }}>
-        Login
-      </Text>
-      <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
-        Sign in to sync likes + watchlist.
-      </Text>
-
-      <View style={{ marginTop: 20, gap: 12 }}>
-        <TextInput
-          value={email}
-          onChangeText={(t) => {
-            setEmail(t);
-            clearError();
-          }}
-          placeholder="Email"
-          placeholderTextColor={theme.colors.muted}
-          autoCapitalize="none"
-          keyboardType="email-address"
+      <View style={{ marginTop: 10 }}>
+        <View
           style={{
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderWidth: 1,
-            padding: 14,
-            borderRadius: 14,
-            color: theme.colors.text,
+            position: "absolute",
+            top: -30,
+            right: -20,
+            width: 140,
+            height: 140,
+            borderRadius: 999,
+            backgroundColor: theme.colors.primary,
+            opacity: 0.12,
           }}
+          pointerEvents="none"
+        />
+        <View
+          style={{
+            position: "absolute",
+            top: 60,
+            left: -30,
+            width: 90,
+            height: 90,
+            borderRadius: 999,
+            backgroundColor: theme.colors.primary,
+            opacity: 0.08,
+          }}
+          pointerEvents="none"
         />
 
-        <TextInput
-          value={password}
-          onChangeText={(t) => {
-            setPassword(t);
-            clearError();
-          }}
-          placeholder="Password"
-          placeholderTextColor={theme.colors.muted}
-          secureTextEntry
-          style={{
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderWidth: 1,
-            padding: 14,
-            borderRadius: 14,
-            color: theme.colors.text,
-          }}
-        />
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+          Welcome back
+        </Text>
+        <Text style={{ color: theme.colors.text, fontSize: 34, fontWeight: "900", marginTop: 4 }}>
+          Login
+        </Text>
+        <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
+          Sign in to sync likes + watchlist.
+        </Text>
+      </View>
+
+      <View
+        style={{
+          marginTop: 20,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          borderWidth: 1,
+          borderRadius: 18,
+          padding: 16,
+          gap: 12,
+        }}
+      >
+        <View>
+          <Text style={{ color: theme.colors.muted, fontSize: 12, fontWeight: "800", marginBottom: 6 }}>
+            Email
+          </Text>
+          <TextInput
+            value={email}
+            onChangeText={(t) => {
+              setEmail(t);
+              clearError();
+            }}
+            placeholder="you@example.com"
+            placeholderTextColor={theme.colors.muted}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={{
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              borderWidth: 1,
+              padding: 14,
+              borderRadius: 14,
+              color: theme.colors.text,
+            }}
+          />
+        </View>
+
+        <View>
+          <Text style={{ color: theme.colors.muted, fontSize: 12, fontWeight: "800", marginBottom: 6 }}>
+            Password
+          </Text>
+          <TextInput
+            value={password}
+            onChangeText={(t) => {
+              setPassword(t);
+              clearError();
+            }}
+            placeholder="••••••••"
+            placeholderTextColor={theme.colors.muted}
+            secureTextEntry
+            style={{
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              borderWidth: 1,
+              padding: 14,
+              borderRadius: 14,
+              color: theme.colors.text,
+            }}
+          />
+        </View>
 
         {error ? (
           <Text style={{ color: theme.colors.danger ?? "#ff5252", fontWeight: "700" }}>{error}</Text>
@@ -78,9 +130,9 @@ export default function LoginScreen() {
           style={{
             backgroundColor: theme.colors.primary,
             paddingVertical: 14,
-            borderRadius: 16,
+            borderRadius: 999,
             alignItems: "center",
-            marginTop: 6,
+            marginTop: 4,
           }}
         >
           <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>Login</Text>
@@ -89,11 +141,11 @@ export default function LoginScreen() {
         <Pressable
           onPress={() => nav.navigate("Register")}
           style={{
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.background,
             borderColor: theme.colors.border,
             borderWidth: 1,
             paddingVertical: 14,
-            borderRadius: 16,
+            borderRadius: 999,
             alignItems: "center",
           }}
         >

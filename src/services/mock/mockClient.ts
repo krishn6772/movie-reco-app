@@ -1,7 +1,17 @@
-import type { CreditsResponse, MovieDetails, TmdbListResponse, Movie } from "../tmdb/types";
+import type {
+  CreditsResponse,
+  MovieDetails,
+  TmdbListResponse,
+  Movie,
+  TvDetails,
+  TmdbVideosResponse,
+  WatchProvidersResponse,
+  GenresResponse,
+  MediaItem,
+} from "../tmdb/types";
 import { mockMovies, mockDetailsById, mockCreditsById } from "./mockData";
 
-function toListResponse(items: Movie[], page: number): TmdbListResponse<Movie> {
+function toListResponse(items: MediaItem[], page: number): TmdbListResponse<MediaItem> {
   const pageSize = 20;
   const start = (page - 1) * pageSize;
   const slice = items.slice(start, start + pageSize);
@@ -36,8 +46,33 @@ export const mockTmdb = {
       return toListResponse(mockMovies.upcoming, page) as TmdbListResponse<Movie>;
     }
 
+    // TV placeholders (reuse movie mocks)
+    if (includesPath(path, "/trending/tv/week")) {
+      return toListResponse(mockMovies.trending, page) as TmdbListResponse<Movie>;
+    }
+    if (includesPath(path, "/tv/popular")) {
+      return toListResponse(mockMovies.popular, page) as TmdbListResponse<Movie>;
+    }
+    if (includesPath(path, "/tv/top_rated")) {
+      return toListResponse(mockMovies.topRated, page) as TmdbListResponse<Movie>;
+    }
+    if (includesPath(path, "/tv/on_the_air")) {
+      return toListResponse(mockMovies.upcoming, page) as TmdbListResponse<Movie>;
+    }
+    if (includesPath(path, "/tv/airing_today")) {
+      return toListResponse(mockMovies.upcoming, page) as TmdbListResponse<Movie>;
+    }
+
     // SEARCH
     if (includesPath(path, "/search/movie")) {
+      const q = String(params.query ?? "").trim().toLowerCase();
+      const all = mockMovies.all;
+      const filtered = q
+        ? all.filter((m) => m.title.toLowerCase().includes(q))
+        : [];
+      return toListResponse(filtered, page) as TmdbListResponse<Movie>;
+    }
+    if (includesPath(path, "/search/tv")) {
       const q = String(params.query ?? "").trim().toLowerCase();
       const all = mockMovies.all;
       const filtered = q
@@ -48,18 +83,32 @@ export const mockTmdb = {
 
     // DETAILS
     const movieIdMatch = path.match(/\/movie\/(\d+)$/);
-    if (movieIdMatch) {
-      const id = Number(movieIdMatch[1]);
+    const tvIdMatch = path.match(/\/tv\/(\d+)$/);
+    if (movieIdMatch || tvIdMatch) {
+      const id = Number((movieIdMatch ?? tvIdMatch)![1]);
       const details = mockDetailsById[id];
       if (details) return details as MovieDetails;
       // fallback: convert base movie into details-like shape
       const base = mockMovies.all.find((m) => m.id === id);
       if (!base) throw new Error(`Mock details not found for id=${id}`);
+      if (movieIdMatch) {
+        return {
+          ...base,
+          genres: base.genre_ids.map((gid) => ({ id: gid, name: `Genre ${gid}` })),
+          runtime: 110,
+        } as MovieDetails;
+      }
       return {
         ...base,
+        name: base.title,
+        original_name: base.original_title,
+        first_air_date: base.release_date,
         genres: base.genre_ids.map((gid) => ({ id: gid, name: `Genre ${gid}` })),
-        runtime: 110,
-      } as MovieDetails;
+        episode_run_time: [45],
+        number_of_seasons: 2,
+        number_of_episodes: 16,
+        status: "Returning Series",
+      } as TvDetails;
     }
 
     // CREDITS
@@ -73,6 +122,54 @@ export const mockTmdb = {
         cast: [],
         crew: [],
       } as CreditsResponse;
+    }
+    const creditsTvMatch = path.match(/\/tv\/(\d+)\/credits$/);
+    if (creditsTvMatch) {
+      const id = Number(creditsTvMatch[1]);
+      return {
+        id,
+        cast: [],
+        crew: [],
+      } as CreditsResponse;
+    }
+
+    // VIDEOS
+    const videosMatch = path.match(/\/(movie|tv)\/(\d+)\/videos$/);
+    if (videosMatch) {
+      const id = Number(videosMatch[2]);
+      return {
+        id,
+        results: [],
+      } as TmdbVideosResponse;
+    }
+
+    // WATCH PROVIDERS
+    const providersMatch = path.match(/\/(movie|tv)\/(\d+)\/watch\/providers$/);
+    if (providersMatch) {
+      const id = Number(providersMatch[2]);
+      return {
+        id,
+        results: {
+          IN: {
+            link: "https://www.justwatch.com/in",
+            flatrate: [],
+            rent: [],
+            buy: [],
+          },
+        },
+      } as WatchProvidersResponse;
+    }
+
+    // GENRES
+    const genresMatch = path.match(/\/genre\/(movie|tv)\/list$/);
+    if (genresMatch) {
+      return {
+        genres: [
+          { id: 28, name: "Action" },
+          { id: 12, name: "Adventure" },
+          { id: 16, name: "Animation" },
+        ],
+      } as GenresResponse;
     }
 
     throw new Error(`Mock route not implemented for path: ${path}`);

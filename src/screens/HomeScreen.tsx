@@ -4,20 +4,23 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 
 import type { RootStackParamList } from "../navigation/types";
-import { useHomeCategory } from "../services/tmdb/hooks";
+import { useHomeCategory, useGenres } from "../services/tmdb/hooks";
 
 import SectionHeader from "../components/SectionHeader";
 import MovieCard from "../components/MovieCard";
 import Loader from "../components/Loader";
 import ErrorState from "../components/ErrorState";
 import Screen from "../components/Screen";
+import ContentTypeToggle from "../components/ContentTypeToggle";
+import FilterBar from "../components/FilterBar";
 
 import { useTheme } from "../theme/useTheme";
 import { useAppStore } from "../store/useAppStore";
 import { recommendMovies } from "../utils/recommend";
 
-import type { Movie } from "../services/tmdb/types";
-import { posterUrl } from "../utils/format";
+import type { MediaItem } from "../services/tmdb/types";
+import { posterUrl, getMediaTitle, getMediaDate } from "../utils/format";
+import type { HomeCategory } from "../services/tmdb/endpoints";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -30,23 +33,23 @@ const HERO_CARD_HEIGHT = 210;
 function HorizontalRow({
   title,
   subtitle,
-  movies,
-  onPressMovie,
+  items,
+  onPressItem,
 }: {
   title: string;
   subtitle?: string;
-  movies: Movie[];
-  onPressMovie: (id: number) => void;
+  items: MediaItem[];
+  onPressItem: (id: number) => void;
 }) {
   return (
     <View style={{ marginTop: 10 }}>
       <SectionHeader title={title} subtitle={subtitle} />
       <FlatList
         horizontal
-        data={movies}
+        data={items}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <MovieCard movie={item} size="large" onPress={() => onPressMovie(item.id)} />
+          <MovieCard movie={item} size="large" onPress={() => onPressItem(item.id)} />
         )}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 6 }}
         showsHorizontalScrollIndicator={false}
@@ -61,26 +64,26 @@ function HorizontalRow({
 }
 
 function TrendingHeroCarousel({
-  movies,
-  onPressMovie,
+  items,
+  onPressItem,
 }: {
-  movies: Movie[];
-  onPressMovie: (id: number) => void;
+  items: MediaItem[];
+  onPressItem: (id: number) => void;
 }) {
   const { theme } = useTheme();
-  const listRef = useRef<FlatList<Movie>>(null);
-  const timerRef = useRef<any>(null);
+  const listRef = useRef<FlatList<MediaItem>>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [index, setIndex] = useState(0);
-  const heroMovies = useMemo(() => movies.slice(0, 8), [movies]);
+  const heroItems = useMemo(() => items.slice(0, 8), [items]);
 
   const startAuto = () => {
     stopAuto();
-    if (heroMovies.length <= 1) return;
+    if (heroItems.length <= 1) return;
 
     timerRef.current = setInterval(() => {
       setIndex((prev) => {
-        const next = (prev + 1) % heroMovies.length;
+        const next = (prev + 1) % heroItems.length;
         listRef.current?.scrollToOffset({
           offset: next * (HERO_CARD_WIDTH + HERO_GAP),
           animated: true,
@@ -99,9 +102,9 @@ function TrendingHeroCarousel({
     startAuto();
     return () => stopAuto();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroMovies.length]);
+  }, [heroItems.length]);
 
-  if (heroMovies.length === 0) return null;
+  if (heroItems.length === 0) return null;
 
   return (
     <View style={{ marginTop: 10 }}>
@@ -114,7 +117,7 @@ function TrendingHeroCarousel({
       <FlatList
         ref={listRef}
         horizontal
-        data={heroMovies}
+        data={heroItems}
         keyExtractor={(item) => `hero-${item.id}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: HERO_SIDE_PADDING }}
@@ -133,7 +136,7 @@ function TrendingHeroCarousel({
 
           return (
             <Pressable
-              onPress={() => onPressMovie(item.id)}
+              onPress={() => onPressItem(item.id)}
               style={{
                 width: HERO_CARD_WIDTH,
                 height: HERO_CARD_HEIGHT,
@@ -144,22 +147,10 @@ function TrendingHeroCarousel({
                 borderWidth: 1,
               }}
             >
-              {/* Image */}
-              <View style={{ flex: 1 }}>
-                {/* Using ImageBackground is optional; keep simple with MovieCard? 
-                    We'll use RN Image for best control */}
-                {/* eslint-disable-next-line @typescript-eslint/no-var-requires */}
-                {/* Using <Image> directly */}
-              </View>
+              <View style={{ flex: 1 }} />
 
-              {/* We’ll render the image using Image below */}
-              {/* NOTE: keep imports small; use require not needed */}
-              {/* Inline import */}
-              {/* @ts-ignore */}
               {img ? (
-                // @ts-ignore
                 <React.Fragment>
-                  {/* @ts-ignore */}
                   {(() => {
                     const { Image } = require("react-native");
                     return (
@@ -184,7 +175,6 @@ function TrendingHeroCarousel({
                 </View>
               )}
 
-              {/* Overlay */}
               <View
                 style={{
                   position: "absolute",
@@ -199,14 +189,13 @@ function TrendingHeroCarousel({
                   numberOfLines={1}
                   style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}
                 >
-                  {item.title}
+                  {getMediaTitle(item)}
                 </Text>
                 <Text numberOfLines={2} style={{ color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
                   {item.overview || "Tap to view details"}
                 </Text>
               </View>
 
-              {/* Dots */}
               <View
                 style={{
                   position: "absolute",
@@ -220,7 +209,7 @@ function TrendingHeroCarousel({
                   borderRadius: 999,
                 }}
               >
-                {heroMovies.map((_, i) => (
+                {heroItems.map((_, i) => (
                   <View
                     key={`dot-${i}`}
                     style={{
@@ -240,6 +229,28 @@ function TrendingHeroCarousel({
   );
 }
 
+function applyFilters(items: MediaItem[], genreIds: number[], sort: string) {
+  let out = items.slice();
+
+  if (genreIds.length > 0) {
+    out = out.filter((m) => (m.genre_ids ?? []).some((g) => genreIds.includes(g)));
+  }
+
+  if (sort === "rating_desc") {
+    out.sort((a, b) => b.vote_average - a.vote_average);
+  } else if (sort === "date_desc") {
+    out.sort((a, b) => {
+      const da = Date.parse(getMediaDate(a));
+      const db = Date.parse(getMediaDate(b));
+      return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
+    });
+  } else {
+    out.sort((a, b) => b.popularity - a.popularity);
+  }
+
+  return out;
+}
+
 export default function HomeScreen() {
   const nav = useNavigation<Nav>();
   const { theme } = useTheme();
@@ -248,46 +259,52 @@ export default function HomeScreen() {
   const loadPersisted = useAppStore((s) => s.loadPersisted);
   const liked = useAppStore((s) => s.liked);
   const watchlist = useAppStore((s) => s.watchlist);
+  const contentType = useAppStore((s) => s.contentType);
+  const filters = useAppStore((s) => s.filters);
+  const region = useAppStore((s) => s.region);
 
   useEffect(() => {
     loadPersisted();
   }, [loadPersisted]);
 
-  // TMDB categories
-  const trending = useHomeCategory("trending");
-  const popular = useHomeCategory("popular");
-  const topRated = useHomeCategory("top_rated");
-  const upcoming = useHomeCategory("upcoming");
+  const currentCategory = filters.categoryByType[contentType] as HomeCategory;
 
-  const anyLoading =
-    trending.isLoading || popular.isLoading || topRated.isLoading || upcoming.isLoading;
+  const categoryQuery = useHomeCategory(contentType, currentCategory, region);
+  const genresQuery = useGenres(contentType);
 
-  const anyError = trending.error || popular.error || topRated.error || upcoming.error;
+  const anyLoading = categoryQuery.isLoading || genresQuery.isLoading;
+  const anyError = categoryQuery.error || genresQuery.error;
 
-  // Lists
-  const trendingList = trending.data?.results ?? [];
-  const popularList = popular.data?.results ?? [];
-  const topRatedList = topRated.data?.results ?? [];
-  const upcomingList = upcoming.data?.results ?? [];
+  const list = useMemo(() => {
+    const base = categoryQuery.data?.results ?? [];
+    return applyFilters(base, filters.genreIds, filters.sort);
+  }, [categoryQuery.data, filters.genreIds, filters.sort]);
 
-  // Candidate pool for recommendations (merge all + de-dupe)
-  const candidates = useMemo(() => {
-    const all = [...trendingList, ...topRatedList, ...popularList, ...upcomingList];
-    const map = new Map<number, Movie>();
-    all.forEach((m) => map.set(m.id, m));
-    return Array.from(map.values());
-  }, [trendingList, topRatedList, popularList, upcomingList]);
+  const likedByType = useMemo(() => {
+    const map: Record<number, MediaItem> = {};
+    Object.entries(liked).forEach(([key, value]) => {
+      if (key.startsWith(`${contentType}:`)) map[value.id] = value;
+    });
+    return map;
+  }, [liked, contentType]);
+
+  const watchlistByType = useMemo(() => {
+    const map: Record<number, MediaItem> = {};
+    Object.entries(watchlist).forEach(([key, value]) => {
+      if (key.startsWith(`${contentType}:`)) map[value.id] = value;
+    });
+    return map;
+  }, [watchlist, contentType]);
 
   const recommended = useMemo(
-    () => recommendMovies({ candidates, liked, watchlist, limit: 20 }),
-    [candidates, liked, watchlist]
+    () => recommendMovies({ candidates: list, liked: likedByType, watchlist: watchlistByType, limit: 20 }),
+    [list, likedByType, watchlistByType]
   );
 
-  const openDetails = (movieId: number) => {
-    nav.navigate("MovieDetails", { movieId, from: "Home" });
+  const openDetails = (id: number) => {
+    nav.navigate("MovieDetails", { id, type: contentType, from: "Home" });
   };
 
-  // Loading
   if (anyLoading) {
     return (
       <Screen>
@@ -296,7 +313,6 @@ export default function HomeScreen() {
     );
   }
 
-  // Error
   if (anyError) {
     return (
       <Screen>
@@ -304,68 +320,57 @@ export default function HomeScreen() {
           title="Couldn’t load Home"
           message={(anyError as Error)?.message}
           onRetry={() => {
-            trending.refetch();
-            popular.refetch();
-            topRated.refetch();
-            upcoming.refetch();
+            categoryQuery.refetch();
+            genresQuery.refetch();
           }}
         />
       </Screen>
     );
   }
 
-  // Empty
-  const allEmpty =
-    trendingList.length === 0 &&
-    popularList.length === 0 &&
-    topRatedList.length === 0 &&
-    upcomingList.length === 0;
-
-  if (allEmpty) {
+  if (list.length === 0) {
     return (
       <Screen>
         <ErrorState
-          title="No movies loaded"
-          message="All categories returned 0 results. Check proxy/API mode."
-          onRetry={() => {
-            trending.refetch();
-            popular.refetch();
-            topRated.refetch();
-            upcoming.refetch();
-          }}
+          title="No results"
+          message="This category returned 0 results. Try changing filters."
+          onRetry={() => categoryQuery.refetch()}
         />
       </Screen>
     );
   }
 
-  // Main UI
   return (
     <Screen>
       <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 6 }}>
           <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "900" }}>
             MovieReco
           </Text>
           <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
-            Smart movie recommendations
+            Smart recommendations for movies & TV
           </Text>
+          <View style={{ marginTop: 12 }}>
+            <ContentTypeToggle />
+          </View>
+          <FilterBar genres={genresQuery.data?.genres ?? []} />
         </View>
 
-        {/* ✅ Auto sliding hero at top */}
-        <TrendingHeroCarousel movies={trendingList} onPressMovie={openDetails} />
+        <TrendingHeroCarousel items={list} onPressItem={openDetails} />
 
-        {/* Rows */}
         <HorizontalRow
           title="Recommended for you"
           subtitle="Based on your likes + rating + popularity"
-          movies={recommended}
-          onPressMovie={openDetails}
+          items={recommended}
+          onPressItem={openDetails}
         />
 
-        <HorizontalRow title="Popular" movies={popularList} onPressMovie={openDetails} />
-        <HorizontalRow title="Top Rated" movies={topRatedList} onPressMovie={openDetails} />
-        <HorizontalRow title="Upcoming" movies={upcomingList} onPressMovie={openDetails} />
+        <HorizontalRow
+          title="Browse"
+          subtitle={currentCategory.replace(/_/g, " ")}
+          items={list}
+          onPressItem={openDetails}
+        />
 
         <View style={{ height: 28 }} />
       </ScrollView>
